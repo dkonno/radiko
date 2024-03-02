@@ -1,0 +1,84 @@
+#!/bin/sh
+
+AUTHKEY='bcd151073c03b352e1ef2fd66c32209da9ca0afa'
+
+station_id='FMJ'
+program_date=$(date '+%Y%m%d')
+
+while getopts 'd:s:' opt ; do
+  case $opt in
+    d)
+      program_date="$OPTARG" ;;
+    s)
+      station_id="$OPTARG" ;;
+    '?')
+      exit 1 ;;
+  esac
+done
+shift `expr $OPTIND - 1`
+
+## authtokenを取得（auth1）
+curl -s -I -L \
+  -H 'X-Radiko-App: pc_html5' \
+  -H 'X-Radiko-App-Version: 0.0.1' \
+  -H 'X-Radiko-User: dummy_user' \
+  -H 'X-Radiko-Device: pc' \
+  'https://radiko.jp/v2/api/auth1' \
+| tee $$.auth1
+
+authtoken=$(awk '/x-radiko-authtoken/ {print $2}' $$.auth1)
+keylength=$(awk '/x-radiko-keylength/ {print $2}' $$.auth1)
+keyoffset=$(awk '/x-radiko-keyoffset/ {print $2}' $$.auth1)
+echo authtoken $authtoken
+echo keylength $keylength
+echo keyoffset $keyoffset
+
+## auth2のためのpartialkeyを計算
+partialkey=$(echo $AUTHKEY | awk -v keylength=$keylength -v keyoffset=$keyoffset '{print substr($1, keyoffset+1, keylength)}')
+
+## partialkeyを使ってauthtokenを有効化（auth2）
+curl -s -i -L \
+  -H 'X-Radiko-AuthToken: '$authtoken \
+  -H 'X-Radiko-PartialKey: '$(/bin/echo -n $partialkey | base64) \
+  -H 'X-Radiko-User: dummy_user' \
+  -H 'X-Radiko-Device: pc' \
+  'https://radiko.jp/v2/api/auth2' \
+| tee $$.auth2
+
+## 番組表を取得
+curl -L "http://radiko.jp/v3/program/station/date/${program_date}/${station_id}.xml" >$$.program_list
+station_name=$(xpath -q -e "/radiko/stations/station/name/text()" $$.program_list)
+echo $station_name
+
+xpath -q -e '/radiko/stations/station/progs/prog/@id' $$.program_list | while read prog_id ; do
+  echo $prog_id
+  ft=$(xpath -q -e "/radiko/stations/station/progs/prog[@${prog_id}]/@ft" $$.program_list | sed 's/[^0-9]*//g')
+  to=$(xpath -q -e "/radiko/stations/station/progs/prog[@${prog_id}]/@to" $$.program_list | sed 's/[^0-9]*//g')
+  title=$(xpath -q -e "/radiko/stations/station/progs/prog[@${prog_id}]/title/text()" $$.program_list)
+  echo $ft $to $title
+
+  ## ファイル名にオンエア日時と番組タイトルを付ける
+  yyyy=$(expr $ft : '\(....\).*')
+  mm=$(expr $ft : '....\(..\).*')
+  dd=$(expr $ft : '......\(..\).*')
+  from_hhmm=$(expr $ft : '........\(....\).*')
+  to_hhmm=$(expr $to : '........\(....\).*')
+  filename="${yyyy}.${mm}.${dd}-${from_hhmm}-${to_hhmm} [${station_name}] ${title}"
+  echo $filename
+
+  ## 音声データをダウンロードしてファイルに保存する
+  ## ffmpegがwhileの前のパイプを読んでしまうのを避けるため、標準入力を読まないように/dev/nullを読ませる
+  ffmpeg -headers "X-Radiko-AuthToken: $authtoken" \
+    -i "https://radiko.jp/v2/api/ts/playlist.m3u8?station_id=${station_id}&l=15&ft=${ft}&to=${to}" \
+    -loglevel 0 -codec copy "${filename}.m4a" </dev/null
+done
+
+## 番組表を保存する
+yyyy=$(expr $program_date : '\(....\)....')
+mm=$(expr $program_date : '....\(..\)..')
+dd=$(expr $program_date : '......\(..\)')
+mv $$.program_list "${yyyy}.${mm}.${dd} ${station_name}.xml"
+
+rm $$.*
+
+exit 0
