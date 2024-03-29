@@ -66,11 +66,21 @@ xpath -q -e '/radiko/stations/station/progs/prog/@id' $$.program_list | while re
   filename="${yyyy}.${mm}.${dd}-${from_hhmm}-${to_hhmm} [${station_name}] ${title}"
   echo $filename
 
+  ## 短時間の音声ファイルがすでに存在しているときは上書きする
+  overwrite=''
+  if [ -f "${filename}.m4a" ] ; then
+    if [ $(stat -f %z "${filename}.m4a") -lt 128000 ] ; then
+      overwrite='-y'
+    fi
+  fi
+
   ## 音声データをダウンロードしてファイルに保存する
   ## ffmpegがwhileの前のパイプを読んでしまうのを避けるため、標準入力を読まないように/dev/nullを読ませる
   ffmpeg -headers "X-Radiko-AuthToken: $authtoken" \
     -i "https://radiko.jp/v2/api/ts/playlist.m3u8?station_id=${station_id}&l=15&ft=${ft}&to=${to}" \
-    -loglevel 0 -codec copy "${filename}.m4a" </dev/null
+    -loglevel 0 -codec copy $overwrite "${filename}.m4a" </dev/null
+
+  echo ''
 done
 
 ## 番組表を保存する
