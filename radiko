@@ -17,6 +17,11 @@ while getopts 'd:s:' opt ; do
 done
 shift `expr $OPTIND - 1`
 
+## 番組表を取得
+curl -f -L "http://radiko.jp/v3/program/station/date/${program_date}/${station_id}.xml" -o $$.program_list || exit $?
+station_name=$(xpath -q -e "/radiko/stations/station/name/text()" $$.program_list)
+echo $station_name
+
 ## authtokenを取得（auth1）
 curl -s -I -L \
   -H 'X-Radiko-App: pc_html5' \
@@ -44,11 +49,6 @@ curl -s -i -L \
   -H 'X-Radiko-Device: pc' \
   'https://radiko.jp/v2/api/auth2' \
 | tee $$.auth2
-
-## 番組表を取得
-curl -L "http://radiko.jp/v3/program/station/date/${program_date}/${station_id}.xml" >$$.program_list
-station_name=$(xpath -q -e "/radiko/stations/station/name/text()" $$.program_list)
-echo $station_name
 
 xpath -q -e '/radiko/stations/station/progs/prog/@id' $$.program_list | while read prog_id ; do
   echo $prog_id
