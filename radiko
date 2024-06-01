@@ -8,7 +8,15 @@ program_date=$(date '+%Y%m%d')
 while getopts 'd:s:' opt ; do
   case $opt in
     d)
-      program_date="$OPTARG" ;;
+      case $OPTARG in
+        20[0-9][0-9][0-1][0-9][0-3][0-9])
+          program_date="$OPTARG" ;;
+        +[0-9]|-[0-9]|-[0-9][0-9])
+          program_date=$(date -v"$OPTARG"d '+%Y%m%d') ;;
+        *)
+          echo 'Invalid date format' >&2
+          exit 1 ;;
+      esac ;;
     s)
       station_id="$OPTARG" ;;
     '?')
