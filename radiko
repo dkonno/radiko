@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 AUTHKEY='bcd151073c03b352e1ef2fd66c32209da9ca0afa'
 
@@ -62,8 +62,14 @@ xpath -q -e '/radiko/stations/station/progs/prog/@id' $$.program_list | while re
   echo $prog_id
   ft=$(xpath -q -e "/radiko/stations/station/progs/prog[@${prog_id}]/@ft" $$.program_list | sed 's/[^0-9]*//g')
   to=$(xpath -q -e "/radiko/stations/station/progs/prog[@${prog_id}]/@to" $$.program_list | sed 's/[^0-9]*//g')
+  dur=$(xpath -q -e "/radiko/stations/station/progs/prog[@${prog_id}]/@dur" $$.program_list | sed 's/[^0-9]*//g')
   title=$(xpath -q -e "/radiko/stations/station/progs/prog[@${prog_id}]/title/text()" $$.program_list)
-  echo $ft $to $title
+  echo $ft $to $dur $title
+
+  ## 番組開始前だったらスキップする
+  if [ $(date '+%Y%m%d%H%M%S') -lt $ft ] ; then
+    continue
+  fi
 
   ## ファイル名にオンエア日時と番組タイトルを付ける
   yyyy=$(expr $ft : '\(....\).*')
@@ -74,12 +80,27 @@ xpath -q -e '/radiko/stations/station/progs/prog/@id' $$.program_list | while re
   filename="${yyyy}.${mm}.${dd}-${from_hhmm}-${to_hhmm} [${station_name}] ${title}"
   echo $filename
 
-  ## 短時間の音声ファイルがすでに存在しているときは上書きする
+  ## 音声ファイルがすでに存在しているとき
   overwrite=''
   if [ -f "${filename}.m4a" ] ; then
-    if [ $(stat -f %z "${filename}.m4a") -lt 128000 ] ; then
+    ## 短時間（およそ60秒以下）のときは上書きする
+    if [ $(stat -f %z "${filename}.m4a") -lt 360000 ] ; then
       overwrite='-y'
+    else
+      ## 音声ファイルが番組の長さよりも短いときは上書きする
+      duration=$(ffprobe -loglevel 0 -show_format -i "${filename}.m4a" | awk -F'=' '$1=="duration" {printf "%d", 0.5+$2}')
+      echo 'Existing data duration:' $duration
+      echo 'Program duration:' $dur
+      if [ $duration -lt $dur ] ; then
+        overwrite='-y'
+      fi
     fi
+  fi
+
+  ## 番組終了前（放送中）だったら冒頭60秒だけ保存する
+  if [ $(date '+%Y%m%d%H%M%S') -lt $to ] ; then
+    to=$(date -j  -v+60S -f '%Y%m%d%H%M%S' $ft '+%Y%m%d%H%M%S')
+    echo to=$to
   fi
 
   ## 音声データをダウンロードしてファイルに保存する
