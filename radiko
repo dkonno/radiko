@@ -87,11 +87,12 @@ xpath -q -e '/radiko/stations/station/progs/prog/@id' $$.program_list | while re
     if [ $(stat -f %z "${filename}.m4a") -lt 360000 ] ; then
       overwrite='-y'
     else
-      ## 音声ファイルが番組の長さよりも短いときは上書きする
+      ## 既存の音声ファイルの長さを調べる
       duration=$(ffprobe -loglevel 0 -show_format -i "${filename}.m4a" | awk -F'=' '$1=="duration" {printf "%d", 0.5+$2}')
       echo 'Existing data duration:' $duration
       echo 'Program duration:' $dur
-      if [ $duration -lt $dur ] ; then
+      ## 音声ファイルが番組の長さよりも短いときは上書きする
+      if [ x$duration = x ] || [ $duration -lt $dur ] ; then
         overwrite='-y'
       fi
     fi
