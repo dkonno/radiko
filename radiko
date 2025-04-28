@@ -5,7 +5,7 @@ AUTHKEY='bcd151073c03b352e1ef2fd66c32209da9ca0afa'
 station_id='FMJ'
 program_date=$(date '+%Y%m%d')
 
-while getopts 'd:s:' opt ; do
+while getopts 'd:s:l' opt ; do
   case $opt in
     d)
       case $OPTARG in
@@ -19,6 +19,8 @@ while getopts 'd:s:' opt ; do
       esac ;;
     s)
       station_id="$OPTARG" ;;
+    l)
+      program_list_only=1 ;;
     '?')
       exit 1 ;;
   esac
@@ -29,6 +31,14 @@ shift `expr $OPTIND - 1`
 curl -f -L "http://radiko.jp/v3/program/station/date/${program_date}/${station_id}.xml" -o $$.program_list || exit $?
 station_name=$(xpath -q -e "/radiko/stations/station/name/text()" $$.program_list)
 echo $station_name
+## -lオプションのときは番組表を保存して終了
+if [ -n "$program_list_only" ] ; then
+  yyyy=$(expr $program_date : '\(....\)....')
+  mm=$(expr $program_date : '....\(..\)..')
+  dd=$(expr $program_date : '......\(..\)')
+  mv $$.program_list "${yyyy}.${mm}.${dd} ${station_name}.xml"
+  exit 0
+fi
 
 ## authtokenを取得（auth1）
 curl -s -I -L \
