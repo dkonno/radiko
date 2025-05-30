@@ -22,9 +22,19 @@ radiko [-d 日付] [-s ステーションID] [-l]
 ```
 
 ## 前提
-- ffmpegがインストールされている
-- xpathコマンドが使える
+- ffmpegが使える
+- xmllintが使える
 - echoコマンドに-nオプション（改行を出力しない）がある
 
-- macOS 12, 13, 14で動作します
 - 個人的な視聴目的でのみ使用します
+
+## macOS
+```
+brew install ffmpeg
+```
+
+## Respberry Pi (Debian Linux)
+```
+sudo apt install ffmpeg
+sudo apt install libxml2-utils
+```
