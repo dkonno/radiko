@@ -6,7 +6,7 @@
 radiko [-d 日付] [-s ステーションID] [-l]
 -d 日付: 番組日付 yyyymmdd形式
 -d [-+]数字: 相対日付（例 -1 -> 前日、+7 -> 1週間先）
--s ステーションID: 放送局を表す3文字（例 J-WAVE -> FMJ）
+-s ステーションID: 放送局を表すコード（例 J-WAVE -> FMJ）
 -l: 番組表のみ保存
 ```
 
@@ -38,3 +38,10 @@ brew install ffmpeg
 sudo apt install ffmpeg
 sudo apt install libxml2-utils
 ```
+
+## ステーションID
+RadikoのAPIから取得できます。
+https://radiko.jp/v3/station/region/full.xml
+
+Radikoの放送局一覧からリンクしている各放送局の番組表のURLにもステーションIDが入っています。
+https://radiko.jp/index/
