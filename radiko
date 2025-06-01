@@ -5,6 +5,20 @@ AUTHKEY='bcd151073c03b352e1ef2fd66c32209da9ca0afa'
 station_id='FMJ'
 program_date=$(date '+%Y%m%d')
 
+function filesize () {
+  case $(uname -s) in
+    Darwin)
+      stat -f %z "$1"
+      ;;
+    Linux)
+      stat -c %s "$1"
+      ;;
+    *)
+      ls -l "$1" | awk '{print $5}'
+      ;;
+  esac
+}
+
 while getopts 'd:s:l' opt ; do
   case $opt in
     d)
@@ -94,7 +108,7 @@ xmllint --xpath '/radiko/stations/station/progs/prog/@id' $$.program_list | whil
   overwrite=''
   if [ -f "${filename}.m4a" ] ; then
     ## 短時間（およそ60秒以下）のときは上書きする
-    if [ $(stat -f %z "${filename}.m4a") -lt 360000 ] ; then
+    if [ $(filesize "${filename}.m4a") -lt 360000 ] ; then
       overwrite='-y'
     else
       ## 既存の音声ファイルの長さを調べる
