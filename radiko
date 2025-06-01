@@ -20,17 +20,25 @@ function filesize () {
 }
 
 function relative_date () {
-  case $(uname -s) in
-    Darwin)
-      date -v"$1"d '+%Y%m%d'
-      ;;
-    Linux)
-      date --date "$1 days +%Y%m%d"
-      ;;
-    *)
-      echo 'relative date is not supported' >&2
-      exit 1 ;;
-  esac
+  if date -v+1d >/dev/null  2>&1 ; then
+    date -v"$1"d '+%Y%m%d'
+  elif date --date 'now' >/dev/null  2>&1 ; then
+    date --date "$1 days" '+%Y%m%d'
+  else
+    echo 'relative date is not supported' >&2
+    exit 1
+  fi
+}
+
+function one_minute_later () {
+  if date -v+1d >/dev/null 2>&1 ; then
+    date -j -v+60S -f '%Y%m%d%H%M%S' "$1" '+%Y%m%d%H%M%S'
+  elif date --date 'now' >/dev/null 2>&1 ; then
+    origin=$(echo "$1" | awk '{print substr($1,1,4) "/" substr($1,5,2) "/" substr($1,7,2) " " substr($1,9,2) ":" substr($1,11,2) ":" substr($1,13,2)}')
+    date --date "$origin JST +1 minute" '+%Y%m%d%H%M%S'
+  else
+    expr "$1" + 59
+  fi
 }
 
 while getopts 'd:s:l' opt ; do
@@ -138,7 +146,7 @@ xmllint --xpath '/radiko/stations/station/progs/prog/@id' $$.program_list | whil
 
   ## 番組終了前（放送中）だったら冒頭60秒だけ保存する
   if [ $(date '+%Y%m%d%H%M%S') -lt $to ] ; then
-    to=$(date -j  -v+60S -f '%Y%m%d%H%M%S' $ft '+%Y%m%d%H%M%S')
+    to=$(one_minute_later $ft)
     echo to=$to
   fi
 
