@@ -19,6 +19,20 @@ function filesize () {
   esac
 }
 
+function relative_date () {
+  case $(uname -s) in
+    Darwin)
+      date -v"$1"d '+%Y%m%d'
+      ;;
+    Linux)
+      date --date "$1 days +%Y%m%d"
+      ;;
+    *)
+      echo 'relative date is not supported' >&2
+      exit 1 ;;
+  esac
+}
+
 while getopts 'd:s:l' opt ; do
   case $opt in
     d)
@@ -26,7 +40,7 @@ while getopts 'd:s:l' opt ; do
         20[0-9][0-9][0-1][0-9][0-3][0-9])
           program_date="$OPTARG" ;;
         +[0-9]|-[0-9]|-[0-9][0-9])
-          program_date=$(date -v"$OPTARG"d '+%Y%m%d') ;;
+          program_date=$(relative_date "$OPTARG") ;;
         *)
           echo 'Invalid date format' >&2
           exit 1 ;;
