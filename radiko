@@ -104,12 +104,11 @@ curl -s -i -L \
   'https://radiko.jp/v2/api/auth2' \
 | tee $$.auth2
 
-xmllint --xpath '/radiko/stations/station/progs/prog/@id' $$.program_list | while read prog_id ; do
-  echo $prog_id
-  ft=$(xmllint --xpath "/radiko/stations/station/progs/prog[@${prog_id}]/@ft" $$.program_list | sed 's/[^0-9]*//g')
-  to=$(xmllint --xpath "/radiko/stations/station/progs/prog[@${prog_id}]/@to" $$.program_list | sed 's/[^0-9]*//g')
-  dur=$(xmllint --xpath "/radiko/stations/station/progs/prog[@${prog_id}]/@dur" $$.program_list | sed 's/[^0-9]*//g')
-  title=$(xmllint --xpath "/radiko/stations/station/progs/prog[@${prog_id}]/title/text()" $$.program_list)
+xmllint --xpath '/radiko/stations/station/progs/prog/@ft' $$.program_list | while read ft ; do
+  to=$(xmllint --xpath "/radiko/stations/station/progs/prog[@${ft}]/@to" $$.program_list | sed 's/[^0-9]*//g')
+  dur=$(xmllint --xpath "/radiko/stations/station/progs/prog[@${ft}]/@dur" $$.program_list | sed 's/[^0-9]*//g')
+  title=$(xmllint --xpath "/radiko/stations/station/progs/prog[@${ft}]/title/text()" $$.program_list)
+  ft=$(echo ${ft} | sed 's/[^0-9]*//g')
   echo $ft $to $dur $title
 
   ## 番組開始前だったらスキップする
