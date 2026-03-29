@@ -77,7 +77,7 @@ shift `expr $OPTIND - 1`
 ## 番組表を取得
 curl -s -f -L "http://radiko.jp/v3/program/station/date/${program_date}/${station_id}.xml" -o $$.program_list || exit $?
 station_name=$(xmllint --xpath "/radiko/stations/station/name/text()" $$.program_list)
-echo $station_name
+echo $station_name $program_date
 ## -lオプションのときは番組表を保存して終了
 if [ -n "$program_list_only" ] ; then
   yyyy=$(expr $program_date : '\(....\)....')
@@ -157,7 +157,7 @@ xmllint --xpath '/radiko/stations/station/progs/prog/@ft' $$.program_list | whil
       echo 'Existing data duration:' $duration
       echo 'Program duration:' $dur
       ## 音声ファイルが番組の長さよりも短いときは上書きする
-      if [ x$duration = x ] || [ $duration -lt $dur ] ; then
+      if [ -z "$duration" ] || [ $duration -lt $dur ] ; then
         overwrite='-y'
       else
         echo ''
@@ -183,7 +183,7 @@ xmllint --xpath '/radiko/stations/station/progs/prog/@ft' $$.program_list | whil
     seek=
     lsid=
 
-    partial_output="$$.${station_id}_${start_at}.aac"
+    partial_output="$$.${station_id}_${start_at}.m4a"
     echo "file ${partial_output}" >>$$.files
     curl -s \
       -H "X-Radiko-Authtoken: ${authtoken}" \
